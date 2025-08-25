@@ -1,0 +1,12 @@
+#테스트 실행 프롬프트
+python lofi_convert_from_url.py "https://www.youtube.com/watch?v=DeKLpgzh-qQ&ab_channel=%E7%A8%B2%E8%91%89%E6%9B%87" --output-dir outputs --style "lofi hip hop with mellow piano and vinyl crackle" --segment 30
+
+#다운도르 변화만
+python lofi_convert_from_url.py "https://www.youtube.com/watch?v=DeKLpgzh-qQ&ab_channel=%E7%A8%B2%E8%91%89%E6%9B%87" \
+  --output-dir outputs --download-only
+
+#전페 pipeline
+python lofi_convert_from_url.py "https://www.youtube.com/watch?v=DeKLpgzh-qQ&ab_channel=%E7%A8%B2%E8%91%89%E6%9B%87" \
+  --output-dir outputs \
+  --style "Anime shopping mall lo-fi for retail therapy" \
+  --segment 30
