@@ -1,11 +1,14 @@
 #!/bin/bash
 set -euo pipefail
 
+# Better error visibility
+trap 'echo "[ERROR] Failed at line $LINENO" >&2' ERR
+
 # Debian/Ubuntu 필수 패키지 설치 (Python 빌드 및 ffmpeg)
 if command -v apt-get >/dev/null 2>&1; then
   echo "[INFO] Installing build deps and ffmpeg (requires sudo)..."
-  sudo apt-get update -y
-  sudo apt-get install -y make build-essential libssl-dev zlib1g-dev \
+  sudo DEBIAN_FRONTEND=noninteractive apt-get update -y
+  sudo DEBIAN_FRONTEND=noninteractive apt-get install -y make build-essential libssl-dev zlib1g-dev \
     libbz2-dev libreadline-dev libsqlite3-dev wget curl llvm \
     libncursesw5-dev xz-utils tk-dev libxml2-dev libxmlsec1-dev \
     libffi-dev liblzma-dev ffmpeg
@@ -85,5 +88,38 @@ else
   echo "[WARN] torch 버전 확인 실패. torchaudio 최신 버전 설치를 시도합니다."
   uv pip install torchaudio
 fi
+
+# If NVIDIA GPU is present, try to switch to CUDA wheels for torch/torchaudio
+if command -v nvidia-smi >/dev/null 2>&1; then
+  echo "[INFO] NVIDIA GPU detected. Trying CUDA wheels (cu121)."
+  if [ -n "${TORCH_VER:-}" ]; then
+  uv pip install --extra-index-url https://download.pytorch.org/whl/cu121 \
+    "torch==${TORCH_VER}" "torchaudio==${TORCH_VER}" || echo "[WARN] CUDA wheel install failed; keeping CPU wheels."
+  else
+  uv pip install --extra-index-url https://download.pytorch.org/whl/cu121 torch torchaudio || echo "[WARN] CUDA wheel install failed; keeping CPU wheels."
+  fi
+fi
+
+# Quick checks
+python - <<'PY'
+import shutil
+print('[CHECK] ffmpeg:', shutil.which('ffmpeg'))
+try:
+  import yt_dlp; print('[CHECK] yt_dlp:', yt_dlp.__version__)
+except Exception as e:
+  print('[CHECK][ERR] yt_dlp import failed:', e)
+try:
+  import torch; print('[CHECK] torch:', torch.__version__, 'cuda_available=', torch.cuda.is_available())
+except Exception as e:
+  print('[CHECK][ERR] torch import failed:', e)
+try:
+  import torchaudio; print('[CHECK] torchaudio:', torchaudio.__version__)
+except Exception as e:
+  print('[CHECK][ERR] torchaudio import failed:', e)
+try:
+  import audiocraft; print('[CHECK] audiocraft OK')
+except Exception as e:
+  print('[CHECK][ERR] audiocraft import failed:', e)
+PY
 
 echo "[SUCCESS] Python 3.11, audiocraft, yt-dlp 등 환경 자동 세팅 완료!"
